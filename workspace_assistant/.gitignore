@@ -26,7 +26,6 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
-grade_report.json
 
 # Build
 dist/

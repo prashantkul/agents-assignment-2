@@ -173,7 +173,6 @@ cp .env.example .env
 # Add your tokens to .env
 
 python main.py --interactive
-python -m tests.grader --all
 ```
 
 ---
@@ -228,7 +227,7 @@ This launches a local web server (typically at `http://localhost:8000`).
 
 ## Submission
 
-1. Run `python -m tests.grader --all` to verify your score
+1. Test your agent with `adk web` and verify all functionality works
 2. Record a 2-3 minute demo
 3. Complete `docs/reflection.md`
 4. ZIP your project (exclude `credentials/`, `__pycache__/`)
