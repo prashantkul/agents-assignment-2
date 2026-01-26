@@ -173,6 +173,10 @@ cp .env.example .env
 # Add your tokens to .env
 
 python main.py --interactive
+
+# Verify your implementation
+python -m tests.test_tools  # Part 1: Calendar/Tasks
+python -m tests.test_mcp    # Part 2: GitHub MCP
 ```
 
 ---
