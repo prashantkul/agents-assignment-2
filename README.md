@@ -385,10 +385,21 @@ This launches a local web server (typically at `http://localhost:8000`).
 
 ## Submission
 
+This assignment uses **GitHub Classroom**. Your work is submitted by pushing to `main` in your fork.
+
 1. Test your agent with `adk web` and verify all functionality works
-2. Record a 2-3 minute demo
-3. Complete `docs/reflection.md`
-4. ZIP your project (exclude `credentials/`, `__pycache__/`)
+2. Complete `docs/reflection.md`
+3. Commit and push your changes to `main`:
+
+```bash
+git add -A
+git commit -m "Complete assignment 2"
+git push origin main
+```
+
+4. Verify your submission by checking your fork on GitHub — ensure all files are present
+
+**Important:** Do not commit `credentials/`, `token.json`, or `.env` files (these are already in `.gitignore`). The autograder runs on push to `main`.
 
 ---
 
