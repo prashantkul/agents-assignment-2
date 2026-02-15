@@ -385,21 +385,36 @@ This launches a local web server (typically at `http://localhost:8000`).
 
 ## Submission
 
-This assignment uses **GitHub Classroom**. Your work is submitted by pushing to `main` in your fork.
+This assignment uses **GitHub Classroom**. Your work is submitted by pushing to your repository's `main` branch.
+
+### Steps
 
 1. Test your agent with `adk web` and verify all functionality works
-2. Complete `docs/reflection.md`
-3. Commit and push your changes to `main`:
+2. Run the verification tests:
+   ```bash
+   cd workspace_assistant
+   python -m tests.test_tools
+   python -m tests.test_mcp
+   ```
+3. Complete `docs/reflection_template.md`
+4. Commit and push your changes:
+   ```bash
+   git add -A
+   git commit -m "Submit assignment 2"
+   git push origin main
+   ```
+5. Verify your submission on GitHub — go to your repository page and confirm all files are present
 
-```bash
-git add -A
-git commit -m "Complete assignment 2"
-git push origin main
-```
+### How Grading Works
 
-4. Verify your submission by checking your fork on GitHub — ensure all files are present
+- When you push to `main`, the autograder automatically creates a **Pull Request** with your grading results
+- Check the **Pull Requests** tab on your GitHub repository to see your score and feedback
+- You can push multiple times before the deadline; each push triggers a new grading run
 
-**Important:** Do not commit `credentials/`, `token.json`, or `.env` files (these are already in `.gitignore`). The autograder runs on push to `main`.
+### Important
+
+- **Do NOT commit sensitive files** — `credentials/`, `token.json`, and `.env` are already in `.gitignore`
+- Make sure your code passes the local tests before pushing
 
 ---
 
