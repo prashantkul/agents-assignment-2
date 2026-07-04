@@ -7,6 +7,10 @@ This helps you verify your tools work before submission.
 """
 
 import inspect
+import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 def check_tool_requirements(tools: list, option: str) -> dict:
