@@ -95,62 +95,100 @@ def load_mcp_config() -> dict:
 # =============================================================================
 # BONUS (+25 points) - Tool Search Pattern
 # =============================================================================
-# Implement defer_loading to reduce token usage by ~80%
+# The installed google-adk version has no `defer_loading` kwarg on McpToolset,
+# so the on-demand discovery behavior is implemented by hand instead:
+# - ESSENTIAL_TOOL_NAMES stays eagerly loaded (schemas always in context)
+# - search_github_tools() discovers the rest by name/description only
+# - call_github_tool() invokes whatever search_github_tools() found
 #
-# Why: GitHub MCP has 15+ tools (~8K tokens). Loading all upfront is wasteful.
-# With defer_loading, tools are discovered on-demand (~1.5K tokens).
-#
-# Points breakdown:
-# - search_github_tools function (10 pts)
-# - defer_loading=True configured (10 pts)
-# - create_agent_with_tool_search works (5 pts)
-#
-# Steps:
-# 1. Create a search_github_tools tool that searches available MCP tools
-# 2. Configure McpToolset with defer_loading=True
-# 3. Keep only 1-2 frequently-used tools always loaded
-#
-# REQUIRED: In your reflection, compare context/token usage:
-# - Run WITHOUT defer_loading, note context size (~8K tokens for 15+ tools)
-# - Run WITH defer_loading, note context size (~1.5K tokens)
-# - Calculate and report the % reduction
-#
-# Example structure:
-#
-# from google.adk.tools import tool
-#
-# @tool
-# def search_github_tools(query: str) -> dict:
-#     """Search for available GitHub tools by keyword.
-#
-#     Args:
-#         query: Search term (e.g., "issues", "repository", "pull request")
-#
-#     Returns:
-#         dict with matching tool names and descriptions
-#     """
-#     # TODO: Implement tool search logic
-#     pass
-#
-#
-# def get_github_mcp_toolset_deferred() -> McpToolset:
-#     """Create McpToolset with defer_loading for on-demand tool discovery."""
-#     token = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
-#     if not token:
-#         raise ValueError("GITHUB_PERSONAL_ACCESS_TOKEN not set")
-#
-#     server_params = StdioServerParameters(
-#         command="npx",
-#         args=["-y", "@modelcontextprotocol/server-github"],
-#         env={"GITHUB_PERSONAL_ACCESS_TOKEN": token}
-#     )
-#
-#     return McpToolset(
-#         connection_params=StdioConnectionParams(server_params=server_params),
-#         defer_loading=True  # Key: tools loaded on-demand
-#     )
+# This keeps the LLM's upfront context to ~4 tool schemas (2 essential +
+# 2 meta-tools) instead of all 15+ GitHub MCP tool schemas.
+
+ESSENTIAL_TOOL_NAMES = ["search_repositories", "get_file_contents"]
+
+_full_toolset: McpToolset | None = None
+_full_tools_cache: list | None = None
+
+
+async def _get_full_tools() -> list:
+    """Lazily connect to the GitHub MCP server and cache its full tool list."""
+    global _full_toolset, _full_tools_cache
+    if _full_tools_cache is None:
+        _full_toolset = get_github_mcp_toolset()
+        _full_tools_cache = await _full_toolset.get_tools()
+    return _full_tools_cache
+
+
+async def search_github_tools(query: str) -> dict:
+    """Search for available GitHub MCP tools by keyword.
+
+    Use this to discover tools beyond the ones already loaded (e.g. issues,
+    pull requests, commits) before calling call_github_tool.
+
+    Args:
+        query: Search term (e.g., "issues", "repository", "pull request").
+
+    Returns:
+        dict with 'status' and a 'tools' list of {name, description}.
+    """
+    try:
+        tools = await _get_full_tools()
+        q = query.lower()
+        matches = [
+            {"name": t.name, "description": t.description}
+            for t in tools
+            if q in t.name.lower() or q in (t.description or "").lower()
+        ]
+        return {"status": "success", "tools": matches}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+async def call_github_tool(tool_name: str, arguments: dict) -> dict:
+    """Call a GitHub MCP tool discovered via search_github_tools.
+
+    Args:
+        tool_name: Exact tool name from search_github_tools results.
+        arguments: Keyword arguments to pass to that tool.
+
+    Returns:
+        dict with 'status' and the tool's 'result', or an error message.
+    """
+    try:
+        tools = await _get_full_tools()
+        tool = next((t for t in tools if t.name == tool_name), None)
+        if tool is None:
+            return {"status": "error", "message": f"Unknown tool: {tool_name}"}
+        result = await tool.run_async(args=arguments, tool_context=None)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def get_github_mcp_toolset_deferred() -> McpToolset:
+    """Create an McpToolset restricted to only the essential, always-loaded tools."""
+    token = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+    if not token:
+        raise ValueError("GITHUB_PERSONAL_ACCESS_TOKEN not set")
+
+    server_params = StdioServerParameters(
+        command="npx",
+        args=["-y", "@modelcontextprotocol/server-github"],
+        env={"GITHUB_PERSONAL_ACCESS_TOKEN": token},
+    )
+
+    return McpToolset(
+        connection_params=StdioConnectionParams(server_params=server_params),
+        tool_filter=ESSENTIAL_TOOL_NAMES,
+    )
 
 
 mcp_tools = [
     get_github_mcp_toolset(),
+]
+
+mcp_tools_deferred = [
+    get_github_mcp_toolset_deferred(),
+    search_github_tools,
+    call_github_tool,
 ]
